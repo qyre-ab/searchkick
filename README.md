@@ -2021,7 +2021,7 @@ Product.search "ah", misspellings: {prefix_length: 2} # ah, no aha
 
 ## Upgrading Conversions
 
-Upgrade conversions without downtime. Add `conversions_v2` to your model and an additional field:
+Upgrade conversions without downtime. Add `conversions_v2` to your model and an additional field to `search_data`:
 
 ```ruby
 class Product < ApplicationRecord
