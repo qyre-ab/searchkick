@@ -385,6 +385,10 @@ module Searchkick
         }
       end
 
+      if (Array(options[:conversions_v2]).map(&:to_s) & Array(options[:conversions]).map(&:to_s)).any?
+        raise ArgumentError, "Must have separate conversions fields"
+      end
+
       mapping_options = Hash[
         [:suggest, :word, :text_start, :text_middle, :text_end, :word_start, :word_middle, :word_end, :highlight, :searchable, :filterable]
           .map { |type| [type, (options[type] || []).map(&:to_s)] }
