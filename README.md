@@ -650,7 +650,7 @@ Add conversion data with:
 class Product < ApplicationRecord
   has_many :searches, class_name: "Searchjoy::Search", as: :convertable
 
-  searchkick conversions: [:conversions] # name of field
+  searchkick conversions_v2: [:conversions] # name of field
 
   def search_data
     {
