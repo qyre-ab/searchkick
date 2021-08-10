@@ -17,7 +17,7 @@ class ConversionsTest < Minitest::Test
       {name: "Tomato B", conversions_v2: {"tomato" => 2}},
       {name: "Tomato C", conversions_v2: {"tomato" => 3}}
     ]
-    assert_order "tomato", ["Tomato C", "Tomato B", "Tomato A"]
+    assert_order "tomato", ["Tomato C", "Tomato B", "Tomato A"], conversions_v2: [:conversions_v2]
   end
 
   def test_multiple_conversions

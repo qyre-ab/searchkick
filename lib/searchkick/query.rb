@@ -16,7 +16,7 @@ module Searchkick
 
     def initialize(klass, term = "*", **options)
       unknown_keywords = options.keys - [:aggs, :block, :body, :body_options, :boost,
-        :boost_by, :boost_by_distance, :boost_by_recency, :boost_where, :conversions, :conversions_term, :debug, :emoji, :exclude, :execute, :explain,
+        :boost_by, :boost_by_distance, :boost_by_recency, :boost_where, :conversions, :conversions_v2, :conversions_term, :debug, :emoji, :exclude, :execute, :explain,
         :fields, :highlight, :includes, :index_name, :indices_boost, :limit, :load,
         :match, :misspellings, :models, :model_includes, :offset, :operator, :order, :padding, :page, :per_page, :profile,
         :request_params, :routing, :scope_results, :scroll, :select, :similar, :smart_aggs, :suggest, :total_entries, :track, :type, :where]
@@ -642,7 +642,8 @@ module Searchkick
 
     def set_conversions_v2
       conversions_fields = Array(options[:conversions_v2] || searchkick_options[:conversions_v2]).map(&:to_s)
-      if conversions_fields.present? && options[:conversions_v2] != false
+      # disable if searchkick_options[:conversions] to make it easy to upgrade without downtime
+      if conversions_fields.present? && options[:conversions_v2] != false && !(options[:conversions_v2].nil? && searchkick_options[:conversions])
         conversions_fields.map do |conversions_field|
           {
             rank_feature: {

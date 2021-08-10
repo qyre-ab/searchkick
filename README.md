@@ -2019,6 +2019,38 @@ Product.search "api", misspellings: {prefix_length: 2} # api, apt, no ahi
 Product.search "ah", misspellings: {prefix_length: 2} # ah, no aha
 ```
 
+## Upgrading Conversions
+
+Upgrade conversions without downtime. Add `conversions_v2` to your model and an additional field:
+
+```ruby
+class Product < ApplicationRecord
+  searchkick conversions: [:conversions], conversions_v2: [:conversions_v2]
+
+  def search_data
+    conversions = searches.group(:query).distinct.count(:user_id)
+    {
+      conversions: conversions,
+      conversions_v2: conversions
+    }
+  end
+end
+```
+
+Reindex, then remove `conversions`:
+
+```ruby
+class Product < ApplicationRecord
+  searchkick conversions_v2: [:conversions_v2]
+
+  def search_data
+    {
+      conversions_v2: searches.group(:query).distinct.count(:user_id)
+    }
+  end
+end
+```
+
 ## Elasticsearch 6 to 7 Upgrade
 
 1. Install Searchkick 4
