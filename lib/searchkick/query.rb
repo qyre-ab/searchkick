@@ -25,7 +25,7 @@ module Searchkick
       term = term.to_s
 
       if options[:emoji]
-        term = EmojiParser.parse_unicode(term) { |e| " #{e.name} " }.strip
+        term = EmojiParser.parse_unicode(term) { |e| " #{e.name.tr('_', ' ')} " }.strip
       end
 
       @klass = klass
@@ -109,7 +109,12 @@ module Searchkick
       request_params = query.except(:index, :type, :body)
 
       # no easy way to tell which host the client will use
-      host = Searchkick.client.transport.hosts.first
+      host =
+        if Elasticsearch::VERSION.to_f >= 7.14
+          Searchkick.client.transport.transport.hosts.first
+        else
+          Searchkick.client.transport.hosts.first
+        end
       credentials = host[:user] || host[:password] ? "#{host[:user]}:#{host[:password]}@" : nil
       params = ["pretty"]
       request_params.each do |k, v|
@@ -353,8 +358,8 @@ module Searchkick
               shared_options[:cutoff_frequency] = 0.001 unless operator.to_s == "and" || field_misspellings == false || (!below73? && !track_total_hits?)
               qs << shared_options.merge(analyzer: "searchkick_search")
 
-              # searchkick_search and searchkick_search2 are the same for ukrainian
-              unless %w(japanese korean polish ukrainian vietnamese).include?(searchkick_options[:language])
+              # searchkick_search and searchkick_search2 are the same for some languages
+              unless %w(japanese japanese2 korean polish ukrainian vietnamese).include?(searchkick_options[:language])
                 qs << shared_options.merge(analyzer: "searchkick_search2")
               end
               exclude_analyzer = "searchkick_search2"
@@ -883,10 +888,11 @@ module Searchkick
       }
     end
 
-    # TODO id transformation for arrays
     def set_order(payload)
       order = options[:order].is_a?(Enumerable) ? options[:order] : {options[:order] => :asc}
       id_field = :_id
+      # TODO no longer map id to _id in Searchkick 5
+      # since sorting on _id is deprecated in Elasticsearch
       payload[:sort] = order.is_a?(Array) ? order : Hash[order.map { |k, v| [k.to_s == "id" ? id_field : k, v] }]
     end
 

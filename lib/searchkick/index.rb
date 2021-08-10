@@ -105,7 +105,7 @@ module Searchkick
       indices =
         begin
           if client.indices.respond_to?(:get_alias)
-            client.indices.get_alias
+            client.indices.get_alias(index: "#{name}*")
           else
             client.indices.get_aliases
           end
@@ -161,6 +161,7 @@ module Searchkick
       RecordData.new(self, record).document_type
     end
 
+    # TODO use like: [{_index: ..., _id: ...}] in Searchkick 5
     def similar_record(record, **options)
       like_text = retrieve(record).to_hash
         .keep_if { |k, _| !options[:fields] || options[:fields].map(&:to_s).include?(k) }

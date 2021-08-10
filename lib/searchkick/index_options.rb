@@ -153,6 +153,7 @@ module Searchkick
         }
       }
 
+      raise ArgumentError, "Can't pass both language and stemmer" if options[:stemmer] && language
       update_language(settings, language)
       update_stemming(settings)
 
@@ -234,6 +235,27 @@ module Searchkick
             type: "kuromoji"
           }
         )
+      when "japanese2"
+        analyzer = {
+          type: "custom",
+          tokenizer: "kuromoji_tokenizer",
+          filter: [
+            "kuromoji_baseform",
+            "kuromoji_part_of_speech",
+            "cjk_width",
+            "ja_stop",
+            "searchkick_stemmer",
+            "lowercase"
+          ]
+        }
+        settings[:analysis][:analyzer].merge!(
+          default_analyzer => analyzer.deep_dup,
+          searchkick_search: analyzer.deep_dup,
+          searchkick_search2: analyzer.deep_dup
+        )
+        settings[:analysis][:filter][:searchkick_stemmer] = {
+          type: "kuromoji_stemmer"
+        }
       when "korean"
         settings[:analysis][:analyzer].merge!(
           default_analyzer => {
@@ -286,6 +308,18 @@ module Searchkick
     end
 
     def update_stemming(settings)
+      if options[:stemmer]
+        stemmer = options[:stemmer]
+        # could also support snowball and stemmer
+        case stemmer[:type]
+        when "hunspell"
+          # supports all token filter options
+          settings[:analysis][:filter][:searchkick_stemmer] = stemmer
+        else
+          raise ArgumentError, "Unknown stemmer: #{stemmer[:type]}"
+        end
+      end
+
       stem = options[:stem]
 
       # language analyzer used
@@ -505,8 +539,18 @@ module Searchkick
         end
         settings[:analysis][:filter][:searchkick_synonym_graph] = synonym_graph
 
-        [:searchkick_search2, :searchkick_word_search].each do |analyzer|
-          settings[:analysis][:analyzer][analyzer][:filter].insert(2, "searchkick_synonym_graph")
+        if options[:language] == "japanese2"
+          [:searchkick_search, :searchkick_search2].each do |analyzer|
+            settings[:analysis][:analyzer][analyzer][:filter].insert(4, "searchkick_synonym_graph")
+          end
+        else
+          [:searchkick_search2, :searchkick_word_search].each do |analyzer|
+            unless settings[:analysis][:analyzer][analyzer].key?(:filter)
+              raise Searchkick::Error, "Search synonyms are not supported yet for language"
+            end
+
+            settings[:analysis][:analyzer][analyzer][:filter].insert(2, "searchkick_synonym_graph")
+          end
         end
       end
     end

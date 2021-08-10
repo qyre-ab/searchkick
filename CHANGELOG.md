@@ -1,3 +1,32 @@
+## 4.5.3 (unreleased)
+
+- Added support for `OPENSEARCH_URL`
+
+## 4.5.2 (2021-08-05)
+
+- Fixed error with reindex queue
+- Fixed error with `model_name` method with multiple models
+- Fixed error with `debug` option with elasticsearch-ruby 7.14
+
+## 4.5.1 (2021-08-03)
+
+- Improved performance of reindex queue
+
+## 4.5.0 (2021-06-07)
+
+- Added experimental support for OpenSearch
+- Added support for synonyms in Japanese
+
+## 4.4.4 (2021-03-12)
+
+- Fixed `too_long_frame_exception` with `scroll` method
+- Fixed multi-word emoji tokenization
+
+## 4.4.3 (2021-02-25)
+
+- Added support for Hunspell
+- Fixed warning about accessing system indices
+
 ## 4.4.2 (2020-11-23)
 
 - Added `missing_records` method to results

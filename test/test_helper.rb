@@ -12,14 +12,18 @@ ENV["ES_PATH"] ||= "#{ENV["HOME"]}/elasticsearch/#{ENV["ELASTICSEARCH_VERSION"]}
 
 $logger = ActiveSupport::Logger.new(ENV["VERBOSE"] ? STDOUT : nil)
 
-Searchkick.client.transport.logger = $logger
+if Elasticsearch::VERSION.to_f >= 7.14
+  Searchkick.client.transport.transport.logger = $logger
+else
+  Searchkick.client.transport.logger = $logger
+end
 Searchkick.search_timeout = 5
 Searchkick.index_suffix = ENV["TEST_ENV_NUMBER"] # for parallel tests
 
 # add to elasticsearch-7.0.0/config/
 Searchkick.wordnet_path = "wn_s.pl" if ENV["WORDNET"]
 
-puts "Running against Elasticsearch #{Searchkick.server_version}"
+puts "Running against #{Searchkick.opensearch? ? "OpenSearch" : "Elasticsearch"} #{Searchkick.server_version}"
 
 Searchkick.redis =
   if defined?(ConnectionPool)
@@ -112,6 +116,13 @@ class Minitest::Test
       misspellings: misspellings
     }
     assert_search(term, expected, options, klass)
+  end
+
+  def assert_warns(message)
+    _, stderr = capture_io do
+      yield
+    end
+    assert_match "[searchkick] WARNING: #{message}", stderr
   end
 
   def with_options(options, klass = default_model)

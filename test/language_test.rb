@@ -3,6 +3,7 @@ require_relative "test_helper"
 class LanguageTest < Minitest::Test
   def setup
     skip "Requires plugin" unless ci? || ENV["TEST_LANGUAGE"]
+    skip "Requires Elasticsearch" if Searchkick.opensearch?
 
     Song.destroy_all
   end
@@ -35,6 +36,33 @@ class LanguageTest < Minitest::Test
       store_names ["JR新宿駅の近くにビールを飲みに行こうか"]
       assert_language_search "飲む", ["JR新宿駅の近くにビールを飲みに行こうか"]
       assert_language_search "jr", ["JR新宿駅の近くにビールを飲みに行こうか"]
+      assert_language_search "新", []
+    end
+  end
+
+  def test_japanese_search_synonyms
+    error = assert_raises(Searchkick::Error) do
+      with_options({language: "japanese", search_synonyms: [["飲む", "喰らう"]]}) do
+      end
+    end
+    assert_equal "Search synonyms are not supported yet for language", error.message
+  end
+
+  def test_japanese2
+    # requires https://www.elastic.co/guide/en/elasticsearch/plugins/7.4/analysis-kuromoji.html
+    with_options({language: "japanese2"}) do
+      store_names ["JR新宿駅の近くにビールを飲みに行こうか"]
+      assert_language_search "飲む", ["JR新宿駅の近くにビールを飲みに行こうか"]
+      assert_language_search "jr", ["JR新宿駅の近くにビールを飲みに行こうか"]
+      assert_language_search "新", []
+    end
+  end
+
+  def test_japanese2_search_synonyms
+    # requires https://www.elastic.co/guide/en/elasticsearch/plugins/7.4/analysis-kuromoji.html
+    with_options({language: "japanese2", search_synonyms: [["飲む", "喰らう"]]}) do
+      store_names ["JR新宿駅の近くにビールを飲みに行こうか"]
+      assert_language_search "喰らう", ["JR新宿駅の近くにビールを飲みに行こうか"]
       assert_language_search "新", []
     end
   end
@@ -88,6 +116,33 @@ class LanguageTest < Minitest::Test
       assert_language_search "công nghệ thông tin", ["công nghệ thông tin Việt Nam"]
       assert_language_search "công", []
     end
+  end
+
+  def test_stemmer_hunspell
+    skip if ci?
+
+    with_options({stemmer: {type: "hunspell", locale: "en_US"}}) do
+      store_names ["the foxes jumping quickly"]
+      assert_language_search "fox", ["the foxes jumping quickly"]
+    end
+  end
+
+  def test_stemmer_unknown_type
+    error = assert_raises(ArgumentError) do
+      with_options({stemmer: {type: "bad"}}) do
+      end
+    end
+    assert_equal "Unknown stemmer: bad", error.message
+  end
+
+  def test_stemmer_language
+    skip if ci?
+
+    error = assert_raises(ArgumentError) do
+      with_options({stemmer: {type: "hunspell", locale: "en_US"}, language: "english"}) do
+      end
+    end
+    assert_equal "Can't pass both language and stemmer", error.message
   end
 
   def assert_language_search(term, expected)

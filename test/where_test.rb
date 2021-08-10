@@ -113,24 +113,38 @@ class WhereTest < Minitest::Test
     store_names ["abcde"]
     # regular expressions are always anchored right now
     # TODO change in future release
-    assert_search "*", [], where: {name: /abcd/}
-    assert_search "*", [], where: {name: /bcde/}
-    assert_search "*", ["abcde"], where: {name: /abcde/}
-    assert_search "*", ["abcde"], where: {name: /.*bcd.*/}
+    assert_warns "Regular expressions are always anchored in Elasticsearch" do
+      assert_search "*", [], where: {name: /abcd/}
+    end
+    assert_warns "Regular expressions are always anchored in Elasticsearch" do
+      assert_search "*", [], where: {name: /bcde/}
+    end
+    assert_warns "Regular expressions are always anchored in Elasticsearch" do
+      assert_search "*", ["abcde"], where: {name: /abcde/}
+    end
+    assert_warns "Regular expressions are always anchored in Elasticsearch" do
+      assert_search "*", ["abcde"], where: {name: /.*bcd.*/}
+    end
   end
 
   def test_regexp_anchored
     store_names ["abcde"]
     assert_search "*", ["abcde"], where: {name: /\Aabcde\z/}
-    assert_search "*", [], where: {name: /\Abcd/}
-    assert_search "*", [], where: {name: /bcd\z/}
+    assert_warns "Regular expressions are always anchored in Elasticsearch" do
+      assert_search "*", [], where: {name: /\Abcd/}
+    end
+    assert_warns "Regular expressions are always anchored in Elasticsearch" do
+      assert_search "*", [], where: {name: /bcd\z/}
+    end
   end
 
   def test_regexp_case
     store_names ["abcde"]
     assert_search "*", [], where: {name: /\AABCDE\z/}
     # flags don't work
-    assert_search "*", [], where: {name: /\AABCDE\z/i}
+    assert_warns "Case-insensitive flag does not work with Elasticsearch" do
+      assert_search "*", [], where: {name: /\AABCDE\z/i}
+    end
   end
 
   def test_prefix
@@ -277,7 +291,19 @@ class WhereTest < Minitest::Test
       {lat: 27.122789, lon: -94.125535},
       {lat: 27.12278, lon: -125.496146}
     ]
-    assert_search "san", ["San Francisco", "San Antonio"], where: {location: {geo_polygon: {points: polygon}}}
+    _, stderr = capture_io do
+      assert_search "san", ["San Francisco", "San Antonio"], where: {location: {geo_polygon: {points: polygon}}}
+    end
+    unless Searchkick.server_below?("7.12.0")
+      assert_match "Deprecated field [geo_polygon] used", stderr
+    end
+
+    # Field [location] is not of type [geo_shape] but of type [geo_point] error for previous versions
+    unless Searchkick.server_below?("7.14.0")
+      polygon << polygon.first
+      # see test/geo_shape_test.rb for other geo_shape tests
+      assert_search "san", ["San Francisco", "San Antonio"], where: {location: {geo_shape: {type: "polygon", coordinates: [polygon]}}}
+    end
   end
 
   def test_top_left_bottom_right

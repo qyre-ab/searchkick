@@ -11,6 +11,8 @@ class MultiIndicesTest < Minitest::Test
     store_names ["Product A"]
     assert_equal ["Product A"], Product.search("product", index_name: Product.searchkick_index.name).map(&:name)
     assert_equal ["Product A"], Product.search("product", index_name: Product).map(&:name)
+
+    Speaker.search_index.refresh
     assert_equal [], Product.search("product", index_name: Speaker.searchkick_index.name, conversions: false).map(&:name)
   end
 
@@ -39,6 +41,20 @@ class MultiIndicesTest < Minitest::Test
       Product.search(index_name: [Store, "another"])
     end
     assert_includes error.message, "Use Searchkick.search"
+  end
+
+  def test_no_models_or_index_name
+    store_names ["Product A"]
+
+    error = assert_raises(Searchkick::Error) do
+      Searchkick.search("product").results
+    end
+    assert_includes error.message, "Unknown model"
+  end
+
+  def test_no_models_or_index_name_load_false
+    store_names ["Product A"]
+    Searchkick.search("product", load: false).results
   end
 
   private

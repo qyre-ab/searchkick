@@ -56,7 +56,7 @@ module Searchkick
       require "typhoeus/adapters/faraday" if defined?(Typhoeus) && Gem::Version.new(Faraday::VERSION) < Gem::Version.new("0.14.0")
 
       Elasticsearch::Client.new({
-        url: ENV["ELASTICSEARCH_URL"],
+        url: ENV["ELASTICSEARCH_URL"] || ENV["OPENSEARCH_URL"],
         transport_options: {request: {timeout: timeout}, headers: {content_type: "application/json"}},
         retry_on_failure: 2
       }.deep_merge(client_options)) do |f|
@@ -74,11 +74,24 @@ module Searchkick
     (defined?(@search_timeout) && @search_timeout) || timeout
   end
 
+  # private
+  def self.server_info
+    @server_info ||= client.info
+  end
+
   def self.server_version
-    @server_version ||= client.info["version"]["number"]
+    @server_version ||= server_info["version"]["number"]
+  end
+
+  def self.opensearch?
+    unless defined?(@opensearch)
+      @opensearch = server_info["version"]["distribution"] == "opensearch"
+    end
+    @opensearch
   end
 
   def self.server_below?(version)
+    server_version = opensearch? ? "7.10.2" : self.server_version
     Gem::Version.new(server_version.split("-")[0]) < Gem::Version.new(version.split("-")[0])
   end
 

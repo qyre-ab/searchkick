@@ -151,12 +151,12 @@ class MatchTest < Minitest::Test
 
   def test_spaces_in_field
     store_names ["Red Bull"]
-    assert_search "redbull", ["Red Bull"]
+    assert_search "redbull", ["Red Bull"], misspellings: false
   end
 
   def test_spaces_in_query
     store_names ["Dishwasher"]
-    assert_search "dish washer", ["Dishwasher"]
+    assert_search "dish washer", ["Dishwasher"], misspellings: false
   end
 
   def test_spaces_three_words
@@ -254,6 +254,7 @@ class MatchTest < Minitest::Test
   def test_emoji_multiple
     store_names ["Ice Cream Cake"]
     assert_search "🍨🍰", ["Ice Cream Cake"], emoji: true
+    assert_search "🍨🍰", ["Ice Cream Cake"], emoji: true, misspellings: false
   end
 
   # operator

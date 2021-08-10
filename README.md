@@ -20,7 +20,7 @@ Plus:
 - autocomplete
 - “Did you mean” suggestions
 - supports many languages
-- works with ActiveRecord, Mongoid, and NoBrainer
+- works with Active Record, Mongoid, and NoBrainer
 
 Check out [Searchjoy](https://github.com/ankane/searchjoy) for analytics and [Autosuggest](https://github.com/ankane/autosuggest) for query suggestions
 
@@ -45,11 +45,11 @@ Check out [Searchjoy](https://github.com/ankane/searchjoy) for analytics and [Au
 
 ## Getting Started
 
-[Install Elasticsearch](https://www.elastic.co/downloads/elasticsearch). For Homebrew, use:
+Install [Elasticsearch](https://www.elastic.co/downloads/elasticsearch) or [OpenSearch](https://opensearch.org/downloads.html). For Homebrew, use:
 
 ```sh
-brew install elasticsearch
-brew services start elasticsearch
+brew install elasticsearch # or opensearch
+brew services start elasticsearch # or opensearch
 ```
 
 Add this line to your application’s Gemfile:
@@ -58,7 +58,13 @@ Add this line to your application’s Gemfile:
 gem 'searchkick'
 ```
 
-The latest version works with Elasticsearch 6 and 7. For Elasticsearch 5, use version 3.1.3 and [this readme](https://github.com/ankane/searchkick/blob/v3.1.3/README.md).
+For OpenSearch, also add:
+
+```ruby
+gem 'elasticsearch', '< 7.14'
+```
+
+The latest version works with Elasticsearch 6 and 7 and OpenSearch 1. For Elasticsearch 5, use version 3.1.3 and [this readme](https://github.com/ankane/searchkick/blob/v3.1.3/README.md).
 
 Add searchkick to models you want to search.
 
@@ -125,7 +131,7 @@ Order
 order: {_score: :desc} # most relevant first - default
 ```
 
-[All of these sort options are supported](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-request-sort.html)
+[All of these sort options are supported](https://www.elastic.co/guide/en/elasticsearch/reference/current/sort-search-results.html)
 
 Limit / offset
 
@@ -139,7 +145,7 @@ Select
 select: [:name]
 ```
 
-[These source filtering options are supported](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-request-body.html#request-body-search-source-filtering)
+[These source filtering options are supported](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-fields.html#source-filtering)
 
 ### Results
 
@@ -176,7 +182,7 @@ Get the full response from Elasticsearch
 results.response
 ```
 
-**Note:** By default, Elasticsearch [limits paging](#deep-paging-master) to the first 10,000 results for performance. With Elasticsearch 7, this applies to the total count as well.
+**Note:** By default, Elasticsearch [limits paging](#deep-paging) to the first 10,000 results for performance. With Elasticsearch 7, this applies to the total count as well.
 
 ### Boosting
 
@@ -209,7 +215,7 @@ boost_by_recency: {created_at: {scale: "7d", decay: 0.5}}
 
 You can also boost by:
 
-- [Conversions](#keep-getting-better)
+- [Conversions](#intelligent-search)
 - [Distance](#boost-by-distance)
 
 ### Get Everything
@@ -311,7 +317,7 @@ class Product < ApplicationRecord
 end
 ```
 
-See the [list of stemmers](https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-stemmer-tokenfilter.html). A few languages require plugins:
+See the [list of languages](https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-stemmer-tokenfilter.html#analysis-stemmer-tokenfilter-configure-parms). A few languages require plugins:
 
 - `chinese` - [analysis-ik plugin](https://github.com/medcl/elasticsearch-analysis-ik)
 - `chinese2` - [analysis-smartcn plugin](https://www.elastic.co/guide/en/elasticsearch/plugins/7.4/analysis-smartcn.html)
@@ -321,6 +327,14 @@ See the [list of stemmers](https://www.elastic.co/guide/en/elasticsearch/referen
 - `polish` - [analysis-stempel plugin](https://www.elastic.co/guide/en/elasticsearch/plugins/7.4/analysis-stempel.html)
 - `ukrainian` - [analysis-ukrainian plugin](https://www.elastic.co/guide/en/elasticsearch/plugins/7.4/analysis-ukrainian.html)
 - `vietnamese` - [analysis-vietnamese plugin](https://github.com/duydo/elasticsearch-analysis-vietnamese)
+
+You can also use a Hunspell dictionary for stemming.
+
+```ruby
+class Product < ApplicationRecord
+  searchkick stemmer: {type: "hunspell", locale: "en_US"}
+end
+```
 
 Disable stemming with:
 
@@ -393,7 +407,7 @@ And use:
 Product.search_index.reload_synonyms
 ```
 
-#### Elasticsearch < 7.3
+#### Elasticsearch < 7.3 or OpenSearch
 
 You can use a library like [ActsAsTaggableOn](https://github.com/mbleigh/acts-as-taggable-on) and do:
 
@@ -641,7 +655,7 @@ class Product < ApplicationRecord
   def search_data
     {
       name: name,
-      conversions: searches.group(:query).uniq.count(:user_id)
+      conversions: searches.group(:query).distinct.count(:user_id)
       # {"ice cream" => 234, "chocolate" => 67, "cream" => 2}
     }
   end
@@ -891,7 +905,7 @@ Additional options can be specified for each field:
 Band.search "cinema", fields: [:name], highlight: {fields: {name: {fragment_size: 200}}}
 ```
 
-You can find available highlight options in the [Elasticsearch reference](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-request-highlighting.html#_highlighted_fragments).
+You can find available highlight options in the [Elasticsearch reference](https://www.elastic.co/guide/en/elasticsearch/reference/current/highlighting.html).
 
 ## Similar Items
 
@@ -942,7 +956,7 @@ Boost results by distance - closer results are boosted more
 Restaurant.search "noodles", boost_by_distance: {location: {origin: {lat: 37, lon: -122}}}
 ```
 
-Also supports [additional options](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-function-score-query.html#_decay_functions)
+Also supports [additional options](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-function-score-query.html#function-decay)
 
 ```ruby
 Restaurant.search "wings", boost_by_distance: {location: {origin: {lat: 37, lon: -122}, function: "linear", scale: "30mi", decay: 0.5}}
@@ -1204,10 +1218,16 @@ FactoryBot.create(:product, :some_trait, :reindex, some_attribute: "foo")
 
 ### GitHub Actions
 
-Check out [setup-elasticsearch](https://github.com/ankane/setup-elasticsearch) for an easy way to install Elasticsearch.
+Check out [setup-elasticsearch](https://github.com/ankane/setup-elasticsearch) for an easy way to install Elasticsearch:
 
 ```yml
     - uses: ankane/setup-elasticsearch@v1
+```
+
+And [setup-opensearch](https://github.com/ankane/setup-opensearch) for an easy way to install OpenSearch:
+
+```yml
+    - uses: ankane/setup-opensearch@v1
 ```
 
 ## Deployment
@@ -1217,7 +1237,7 @@ Searchkick uses `ENV["ELASTICSEARCH_URL"]` for the Elasticsearch server. This de
 - [Elastic Cloud](#elastic-cloud)
 - [Heroku](#heroku)
 - [Amazon Elasticsearch Service](#amazon-elasticsearch-service)
-- [Self-Hosted and Other](#other)
+- [Self-Hosted and Other](#self-hosted-and-other)
 
 ### Elastic Cloud
 
@@ -1240,7 +1260,7 @@ Choose an add-on: [Bonsai](https://elements.heroku.com/addons/bonsai), [SearchBo
 For Bonsai:
 
 ```sh
-heroku addons:create bonsai
+heroku addons:create bonsai # use --engine=opensearch for OpenSearch
 heroku config:set ELASTICSEARCH_URL=`heroku config:get BONSAI_URL`
 ```
 
@@ -1469,7 +1489,7 @@ Product.search_index.promote(index_name, update_refresh_interval: true)
 
 ### Queuing
 
-Push ids of records needing reindexed to a queue and reindex in bulk for better performance. First, set up Redis in an initializer. We recommend using [connection_pool](https://github.com/mperham/connection_pool).
+Push ids of records needing reindexing to a queue and reindex in bulk for better performance. First, set up Redis in an initializer. We recommend using [connection_pool](https://github.com/mperham/connection_pool).
 
 ```ruby
 Searchkick.redis = ConnectionPool.new { Redis.new }
@@ -1572,14 +1592,14 @@ class ReindexConversionsJob < ApplicationJob
     # get records that have a recent conversion
     recently_converted_ids =
       Searchjoy::Search.where("convertable_type = ? AND converted_at > ?", class_name, 1.day.ago)
-      .order(:convertable_id).uniq.pluck(:convertable_id)
+      .order(:convertable_id).distinct.pluck(:convertable_id)
 
     # split into groups
     recently_converted_ids.in_groups_of(1000, false) do |ids|
       # fetch conversions
       conversions =
         Searchjoy::Search.where(convertable_id: ids, convertable_type: class_name)
-        .group(:convertable_id, :query).uniq.count(:user_id)
+        .group(:convertable_id, :query).distinct.count(:user_id)
 
       # group conversions by record
       conversions_by_record = {}
@@ -1703,7 +1723,7 @@ Check out [this great post](https://www.tiagoamaro.com.br/2014/12/11/multi-tenan
 
 ## Scroll API
 
-Searchkick also supports the [scroll API](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-request-scroll.html). Scrolling is not intended for real time user requests, but rather for processing large amounts of data.
+Searchkick also supports the [scroll API](https://www.elastic.co/guide/en/elasticsearch/reference/current/paginate-search-results.html#scroll-search-results). Scrolling is not intended for real time user requests, but rather for processing large amounts of data.
 
 ```ruby
 Product.search("*", scroll: "1m").scroll do |batch|
@@ -1831,7 +1851,7 @@ class Product < ApplicationRecord
   def search_data
     {
       name: name,
-      unique_user_conversions: searches.group(:query).uniq.count(:user_id),
+      unique_user_conversions: searches.group(:query).distinct.count(:user_id),
       # {"ice cream" => 234, "chocolate" => 67, "cream" => 2}
       total_conversions: searches.group(:query).count
       # {"ice cream" => 412, "chocolate" => 117, "cream" => 6}
@@ -1956,7 +1976,7 @@ products = Product.search("carrots", execute: false)
 products.each { ... } # search not executed until here
 ```
 
-Add [request parameters](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-uri-request.html), like `search_type` and `query_cache`
+Add [request parameters](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-search.html#search-search-api-query-params) like `search_type`
 
 ```ruby
 Product.search("carrots", request_params: {search_type: "dfs_query_then_fetch"})
