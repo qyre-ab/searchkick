@@ -904,6 +904,8 @@ module Searchkick
           filters << {bool: {must_not: where_filters(value)}}
         elsif field == :_and
           filters << {bool: {must: value.map { |or_statement| {bool: {filter: where_filters(or_statement)}} }}}
+        elsif field == :_script
+          filters << {script: {script: {source: value[:source], params: value[:params], lang: "painless"}}}
         # elsif field == :_script
         #   filters << {script: {script: {source: value, lang: "painless"}}}
         else
