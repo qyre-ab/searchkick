@@ -1,4 +1,40 @@
-## 5.1.1 (unreleased)
+## 5.3.1 (2023-11-28)
+
+- Fixed error with misspellings below and failed queries
+
+## 5.3.0 (2023-07-02)
+
+- Fixed error with `cutoff_frequency`
+- Dropped support for Ruby < 3 and Active Record < 6.1
+- Dropped support for Mongoid < 7
+
+## 5.2.4 (2023-05-11)
+
+- Fixed error with non-string routing and `:async` mode
+
+## 5.2.3 (2023-04-12)
+
+- Fixed error with missing records and multiple models
+
+## 5.2.2 (2023-04-01)
+
+- Fixed `total_docs` method
+- Fixed deprecation warning with Active Support 7.1
+
+## 5.2.1 (2023-02-21)
+
+- Added support for `redis-client` gem
+
+## 5.2.0 (2023-02-08)
+
+- Added model name to warning about missing records
+- Fixed unnecessary data loading when reindexing relations with `:async` and `:queue` modes
+
+## 5.1.2 (2023-01-29)
+
+- Fixed error with missing point in time
+
+## 5.1.1 (2022-12-05)
 
 - Added support for strings for `offset` and `per_page`
 

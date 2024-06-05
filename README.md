@@ -26,7 +26,7 @@ Check out [Searchjoy](https://github.com/ankane/searchjoy) for analytics and [Au
 
 :tangerine: Battle-tested at [Instacart](https://www.instacart.com/opensource)
 
-[![Build Status](https://github.com/ankane/searchkick/workflows/build/badge.svg?branch=master)](https://github.com/ankane/searchkick/actions)
+[![Build Status](https://github.com/ankane/searchkick/actions/workflows/build.yml/badge.svg)](https://github.com/ankane/searchkick/actions)
 
 ## Contents
 
@@ -42,8 +42,6 @@ Check out [Searchjoy](https://github.com/ankane/searchjoy) for analytics and [Au
 - [Advanced Search](#advanced)
 - [Reference](#reference)
 - [Contributing](#contributing)
-
-Searchkick 5.0 was recently released! See [how to upgrade](#upgrading)
 
 ## Getting Started
 
@@ -817,7 +815,7 @@ Product.search("milk", boost_where: {orderer_ids: current_user.id})
 
 Autocomplete predicts what a user will type, making the search experience faster and easier.
 
-![Autocomplete](https://gist.github.com/ankane/b6988db2802aca68a589b31e41b44195/raw/40febe948427e5bc53ec4e5dc248822855fef76f/autocomplete.png)
+![Autocomplete](https://gist.githubusercontent.com/ankane/b6988db2802aca68a589b31e41b44195/raw/40febe948427e5bc53ec4e5dc248822855fef76f/autocomplete.png)
 
 **Note:** To autocomplete on search terms rather than results, check out [Autosuggest](https://github.com/ankane/autosuggest).
 
@@ -883,7 +881,7 @@ Then add the search box and JavaScript code to a view.
 
 ## Suggestions
 
-![Suggest](https://gist.github.com/ankane/b6988db2802aca68a589b31e41b44195/raw/40febe948427e5bc53ec4e5dc248822855fef76f/recursion.png)
+![Suggest](https://gist.githubusercontent.com/ankane/b6988db2802aca68a589b31e41b44195/raw/40febe948427e5bc53ec4e5dc248822855fef76f/recursion.png)
 
 ```ruby
 class Product < ApplicationRecord
@@ -902,7 +900,7 @@ products.suggestions # ["peanut butter"]
 
 [Aggregations](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations.html) provide aggregated search data.
 
-![Aggregations](https://gist.github.com/ankane/b6988db2802aca68a589b31e41b44195/raw/40febe948427e5bc53ec4e5dc248822855fef76f/facets.png)
+![Aggregations](https://gist.githubusercontent.com/ankane/b6988db2802aca68a589b31e41b44195/raw/40febe948427e5bc53ec4e5dc248822855fef76f/facets.png)
 
 ```ruby
 products = Product.search("chuck taylor", aggs: [:product_type, :gender, :brand])
@@ -1485,7 +1483,15 @@ ENV["ELASTICSEARCH_URL"] = "https://user:password@host1,https://user:password@ho
 ENV["OPENSEARCH_URL"] = "https://user:password@host1,https://user:password@host2"
 ```
 
-See [elastic-transport](https://github.com/elastic/elastic-transport-ruby) or [opensearch-transport](https://github.com/opensearch-project/opensearch-ruby/tree/main/opensearch-transport) for a complete list of options.
+### Client Options
+
+Create an initializer with:
+
+```ruby
+Searchkick.client_options[:reload_connections] = true
+```
+
+See the docs for [Elasticsearch](https://www.elastic.co/guide/en/elasticsearch/client/ruby-api/current/advanced-config.html) or [Opensearch](https://rubydoc.info/gems/opensearch-transport#configuration) for a complete list of options.
 
 ### Lograge
 
@@ -1838,6 +1844,10 @@ To query nested data, use dot notation.
 ```ruby
 Product.search("san", fields: ["store.city"], where: {"store.zip_code" => 12345})
 ```
+
+## Nearest Neighbors
+
+You can use custom mapping and searching to index vectors and perform k-nearest neighbor search. See the examples for [Elasticsearch](examples/elasticsearch_knn.rb) and [OpenSearch](examples/opensearch_knn.rb).
 
 ## Reference
 

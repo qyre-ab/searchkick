@@ -134,6 +134,9 @@ class PaginationTest < Minitest::Test
 
     store_names ["Product B"]
     assert_equal "Displaying <b>all 2</b> products", view.page_entries_info(Product.search("product"))
+
+    store_names ["Product C"]
+    assert_equal "Displaying products <b>1&nbsp;-&nbsp;2</b> of <b>3</b> in total", view.page_entries_info(Product.search("product").per_page(2))
   end
 
   def test_deep_paging
@@ -154,5 +157,76 @@ class PaginationTest < Minitest::Test
     with_options({max_result_window: 10000}, Song) do
       assert_empty Song.search("*", offset: 10000, limit: 1).to_a
     end
+  end
+
+  def test_search_after
+    store_names ["Product A", "Product B", "Product C", "Product D"]
+    # ensure different created_at
+    store_names ["Product B"]
+
+    options = {order: {name: :asc, created_at: :asc}, per_page: 2}
+
+    products = Product.search("product", **options)
+    assert_equal ["Product A", "Product B"], products.map(&:name)
+
+    search_after = products.hits.last["sort"]
+    products = Product.search("product", body_options: {search_after: search_after}, **options)
+    assert_equal ["Product B", "Product C"], products.map(&:name)
+
+    search_after = products.hits.last["sort"]
+    products = Product.search("product", body_options: {search_after: search_after}, **options)
+    assert_equal ["Product D"], products.map(&:name)
+  end
+
+  def test_pit
+    skip unless pit_supported?
+
+    store_names ["Product A", "Product B", "Product D", "Product E", "Product G"]
+
+    pit_id =
+      if Searchkick.opensearch?
+        path = "#{CGI.escape(Product.searchkick_index.name)}/_search/point_in_time"
+        Searchkick.client.transport.perform_request("POST", path, {keep_alive: "5s"}).body["pit_id"]
+      else
+        Searchkick.client.open_point_in_time(index: Product.searchkick_index.name, keep_alive: "5s")["id"]
+      end
+
+    store_names ["Product C", "Product F"]
+
+    options = {
+      order: {name: :asc},
+      per_page: 2,
+      body_options: {pit: {id: pit_id}},
+      index_name: ""
+    }
+
+    products = Product.search("product", **options)
+    assert_equal ["Product A", "Product B"], products.map(&:name)
+
+    products = Product.search("product", page: 2, **options)
+    assert_equal ["Product D", "Product E"], products.map(&:name)
+
+    products = Product.search("product", page: 3, **options)
+    assert_equal ["Product G"], products.map(&:name)
+
+    products = Product.search("product", page: 4, **options)
+    assert_empty products.map(&:name)
+
+    if Searchkick.opensearch?
+      Searchkick.client.transport.perform_request("DELETE", "_search/point_in_time", {}, {pit_id: pit_id})
+    else
+      Searchkick.client.close_point_in_time(body: {id: pit_id})
+    end
+
+    error = assert_raises do
+      Product.search("product", **options).load
+    end
+    assert_match "No search context found for id", error.message
+  end
+
+  private
+
+  def pit_supported?
+    Searchkick.opensearch? ? !Searchkick.server_below?("2.4.0", true) : !Searchkick.server_below?("7.10.0")
   end
 end
